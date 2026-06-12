@@ -1,0 +1,57 @@
+{
+  "model_name": "SVM (RBF)",
+  "accuracy": 0.9416666666666667,
+  "precision": 0.9417893859405392,
+  "recall": 0.9416666666666667,
+  "f1_score": 0.9416626154594069,
+  "roc_auc": 0.9859027777777777,
+  "confusion_matrix": [
+    [
+      228,
+      12
+    ],
+    [
+      16,
+      224
+    ]
+  ],
+  "classification_report": {
+    "NORMAL": {
+      "precision": 0.9344262295081968,
+      "recall": 0.95,
+      "f1-score": 0.9421487603305785,
+      "support": 240.0
+    },
+    "PNEUMONIA": {
+      "precision": 0.9491525423728814,
+      "recall": 0.9333333333333333,
+      "f1-score": 0.9411764705882353,
+      "support": 240.0
+    },
+    "accuracy": 0.9416666666666667,
+    "macro avg": {
+      "precision": 0.9417893859405391,
+      "recall": 0.9416666666666667,
+      "f1-score": 0.9416626154594069,
+      "support": 480.0
+    },
+    "weighted avg": {
+      "precision": 0.9417893859405392,
+      "recall": 0.9416666666666667,
+      "f1-score": 0.9416626154594069,
+      "support": 480.0
+    }
+  },
+  "cv_scores": {
+    "SVM (RBF)": 94.01,
+    "Random Forest": 91.3,
+    "Gradient Boosting": 91.35
+  },
+  "train_samples": 1920,
+  "test_samples": 480,
+  "n_features": 96,
+  "classes": [
+    "NORMAL",
+    "PNEUMONIA"
+  ]
+}

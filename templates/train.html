@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+{% block title %}Training Model{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Training Model</h1>
+  <p class="page-subtitle">Latih model klasifikasi menggunakan dataset citra rontgen paru-paru</p>
+</div>
+
+<!-- Dataset check notice -->
+<div class="info-notice mb-4">
+  <strong>Persiapan:</strong> Pastikan folder <code>dataset/NORMAL/</code> dan <code>dataset/PNEUMONIA/</code>
+  sudah terisi dengan file gambar sebelum memulai training.
+  Lihat <a href="{{ url_for('tentang') }}">halaman Tentang</a> untuk panduan download dataset.
+</div>
+
+<div class="train-layout">
+
+  <!-- Config panel -->
+  <div class="train-config-panel">
+    <div class="panel-title">Konfigurasi Training</div>
+
+    <div class="config-block">
+      <label class="config-label" for="maxPerClass">Batas Gambar per Kelas</label>
+      <input type="number" id="maxPerClass" class="config-input" value="1200" min="100" max="5000" step="100" />
+      <div class="config-hint">Dataset akan di-undersample agar seimbang antara kedua kelas.</div>
+    </div>
+
+    <div class="config-block">
+      <div class="config-label">Metode Ekstraksi Fitur</div>
+      <div class="config-static">
+        GLCM + LBP + Statistik &nbsp;(~96 fitur)
+      </div>
+    </div>
+
+    <div class="config-block">
+      <div class="config-label">Classifier yang Diuji</div>
+      <div class="config-static">
+        SVM (RBF), Random Forest, Gradient Boosting
+      </div>
+    </div>
+
+    <div class="config-block">
+      <div class="config-label">Validasi</div>
+      <div class="config-static">5-Fold Stratified Cross-Validation</div>
+    </div>
+
+    <div class="config-block">
+      <div class="config-label">Test Split</div>
+      <div class="config-static">20% data (80% training, 20% test)</div>
+    </div>
+
+    {% if trained %}
+    <div class="retrain-warn">
+      Model sudah tersedia. Melanjutkan training akan menggantikan model yang ada.
+    </div>
+    {% endif %}
+
+    <button class="btn-start-train" id="startTrainBtn">
+      {% if trained %}Latih Ulang Model{% else %}Mulai Training{% endif %}
+    </button>
+  </div>
+
+  <!-- Progress & result panel -->
+  <div class="train-result-panel">
+
+    <!-- Idle state -->
+    <div id="idleState" class="train-idle {% if status.running %}hidden{% endif %}">
+      <svg viewBox="0 0 64 64" fill="none">
+        <rect x="8" y="12" width="48" height="40" rx="6" stroke="currentColor" stroke-width="2"/>
+        <path d="M8 22h48" stroke="currentColor" stroke-width="1.8"/>
+        <path d="M20 32h24M20 40h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+      <p>Konfigurasi training di sebelah kiri, lalu klik "Mulai Training".</p>
+    </div>
+
+    <!-- Progress state -->
+    <div id="progressState" class="{% if not status.running %}hidden{% endif %}">
+      <div class="progress-header">
+        <div class="progress-title">Proses Training</div>
+        <div class="progress-pct" id="progressPct">0%</div>
+      </div>
+      <div class="progress-bar-outer">
+        <div class="progress-bar-fill" id="progressBarFill" style="width:0%"></div>
+      </div>
+      <div class="progress-msg" id="progressMsg">Mempersiapkan...</div>
+      <div class="progress-log-wrapper">
+        <div class="progress-log" id="progressLog">Menunggu...</div>
+      </div>
+    </div>
+
+    <!-- Results state -->
+    <div id="resultsState" class="{% if not (trained and not status.running) %}hidden{% endif %}">
+      {% if trained and metrics and not status.running %}
+      {% include "_metrics_result.html" ignore missing %}
+      <div id="metricsResultContainer">{{ _render_metrics(metrics) if _render_metrics is defined else '' }}</div>
+      {% endif %}
+      <div id="dynamicMetrics"></div>
+    </div>
+
+  </div><!-- /.train-result-panel -->
+</div><!-- /.train-layout -->
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const startBtn   = document.getElementById('startTrainBtn');
+  const idleState  = document.getElementById('idleState');
+  const progState  = document.getElementById('progressState');
+  const resState   = document.getElementById('resultsState');
+  const progPct    = document.getElementById('progressPct');
+  const progFill   = document.getElementById('progressBarFill');
+  const progMsg    = document.getElementById('progressMsg');
+  const progLog    = document.getElementById('progressLog');
+  const dynMetrics = document.getElementById('dynamicMetrics');
+
+  let pollInterval = null;
+
+  // Auto-start polling if training is running
+  {% if status.running %}
+  startPolling();
+  {% endif %}
+
+  startBtn.addEventListener('click', () => {
+    const maxPerClass = document.getElementById('maxPerClass').value;
+    const formData = new FormData();
+    formData.append('max_per_class', maxPerClass);
+
+    startBtn.disabled = true;
+    startBtn.textContent = 'Training Berjalan...';
+
+    fetch('{{ url_for("train_start") }}', { method: 'POST', body: formData })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) {
+          alert(data.error);
+          startBtn.disabled = false;
+          startBtn.textContent = 'Mulai Training';
+          return;
+        }
+        idleState.classList.add('hidden');
+        progState.classList.remove('hidden');
+        resState.classList.add('hidden');
+        startPolling();
+      })
+      .catch(err => {
+        alert('Gagal memulai training: ' + err.message);
+        startBtn.disabled = false;
+      });
+  });
+
+  function startPolling() {
+    if (pollInterval) clearInterval(pollInterval);
+    pollInterval = setInterval(pollStatus, 1500);
+  }
+
+  function stopPolling() {
+    if (pollInterval) clearInterval(pollInterval);
+    pollInterval = null;
+  }
+
+  function pollStatus() {
+    fetch('{{ url_for("api_train_status") }}')
+      .then(r => r.json())
+      .then(data => {
+        const pct = data.progress || 0;
+        progPct.textContent = pct + '%';
+        progFill.style.width = pct + '%';
+        progMsg.textContent = data.message || '';
+
+        // Append log line
+        if (data.message) {
+          const line = document.createElement('div');
+          line.textContent = '[' + new Date().toLocaleTimeString() + '] ' + data.message;
+          progLog.appendChild(line);
+          progLog.scrollTop = progLog.scrollHeight;
+        }
+
+        if (data.error) {
+          stopPolling();
+          progMsg.textContent = 'Error: ' + data.error;
+          progFill.classList.add('fill-error');
+          startBtn.disabled = false;
+          startBtn.textContent = 'Coba Lagi';
+        }
+
+        if (data.complete && !data.running) {
+          stopPolling();
+          progState.classList.add('hidden');
+          resState.classList.remove('hidden');
+          if (data.metrics) renderMetrics(data.metrics);
+          startBtn.disabled = false;
+          startBtn.textContent = 'Latih Ulang Model';
+          // Update sidebar status
+          if (window.updateSidebarStatus) window.updateSidebarStatus();
+        }
+      })
+      .catch(() => {});
+  }
+
+  function renderMetrics(m) {
+    const cls = m.classes || ['NORMAL', 'PNEUMONIA'];
+    const cm = m.confusion_matrix || [];
+    const cvHTML = Object.entries(m.cv_scores || {}).map(([name, acc]) =>
+      `<div class="clf-row ${name === m.model_name ? 'clf-best' : ''}">
+        <div class="clf-name">${name}${name === m.model_name ? ' <span class="badge-best">Terpilih</span>' : ''}</div>
+        <div class="clf-bar-outer"><div class="clf-bar-inner" style="width:${acc}%"></div></div>
+        <div class="clf-score">${acc}%</div>
+       </div>`
+    ).join('');
+
+    dynMetrics.innerHTML = `
+      <div class="result-success-banner">Training selesai. Model disimpan.</div>
+      <div class="metrics-grid mt-3">
+        ${metricCard('Accuracy',  m.accuracy)}
+        ${metricCard('Precision', m.precision)}
+        ${metricCard('Recall',    m.recall)}
+        ${metricCard('F1-Score',  m.f1_score)}
+        ${metricCard('ROC-AUC',   m.roc_auc)}
+        <div class="metric-card">
+          <div class="metric-label">Model Terpilih</div>
+          <div class="metric-value" style="font-size:1.1rem;line-height:1.3">${m.model_name}</div>
+        </div>
+      </div>
+      <div class="detail-row mt-4">
+        <div class="detail-card">
+          <div class="detail-card-header">Confusion Matrix</div>
+          <div class="detail-card-body">
+            <table class="cm-table">
+              <thead><tr><th></th>${cls.map(c => `<th class="pred-col">Pred. ${c}</th>`).join('')}</tr></thead>
+              <tbody>${cm.map((row, i) =>
+                `<tr><th class="actual-row">Actual ${cls[i]}</th>${row.map((v, j) =>
+                  `<td class="cm-cell ${i===j?'cm-tp':'cm-fp'}">${v}</td>`).join('')}</tr>`
+              ).join('')}</tbody>
+            </table>
+          </div>
+        </div>
+        <div class="detail-card">
+          <div class="detail-card-header">Perbandingan CV Accuracy</div>
+          <div class="detail-card-body">${cvHTML}</div>
+        </div>
+      </div>`;
+  }
+
+  function metricCard(label, value) {
+    const pct = (value * 100).toFixed(2);
+    return `<div class="metric-card">
+      <div class="metric-label">${label}</div>
+      <div class="metric-value">${pct}<span class="metric-unit">%</span></div>
+      <div class="metric-bar"><div class="metric-fill" style="width:${pct}%"></div></div>
+    </div>`;
+  }
+
+  // Render existing metrics if model already trained
+  {% if trained and metrics %}
+  (function(){
+    const m = {{ metrics | tojson }};
+    renderMetrics(m);
+  })();
+  {% endif %}
+
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Dashboard</h1>
+  <p class="page-subtitle">Ikhtisar sistem klasifikasi penyakit paru-paru</p>
+</div>
+
+<!-- Status banner -->
+{% if trained %}
+<div class="status-banner status-ready">
+  <div class="status-banner-icon">
+    <svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </div>
+  <div>
+    <div class="status-banner-title">Model Siap Digunakan</div>
+    <div class="status-banner-sub">
+      Menggunakan <strong>{{ metrics.model_name }}</strong> — Akurasi {{ "%.1f"|format(metrics.accuracy * 100) }}%
+    </div>
+  </div>
+  <a href="{{ url_for('prediksi_page') }}" class="btn-action ms-auto">Mulai Prediksi</a>
+</div>
+{% else %}
+<div class="status-banner status-warning">
+  <div class="status-banner-icon">
+    <svg viewBox="0 0 24 24" fill="none"><path d="M12 8v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </div>
+  <div>
+    <div class="status-banner-title">Model Belum Dilatih</div>
+    <div class="status-banner-sub">Unggah dataset dan jalankan training sebelum melakukan prediksi.</div>
+  </div>
+  <a href="{{ url_for('train_page') }}" class="btn-action ms-auto">Pergi ke Training</a>
+</div>
+{% endif %}
+
+<!-- Metric cards -->
+{% if trained and metrics %}
+<div class="metrics-grid mt-4">
+  <div class="metric-card">
+    <div class="metric-label">Accuracy</div>
+    <div class="metric-value">{{ "%.2f"|format(metrics.accuracy * 100) }}<span class="metric-unit">%</span></div>
+    <div class="metric-bar"><div class="metric-fill" style="width:{{ "%.1f"|format(metrics.accuracy * 100) }}%"></div></div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">Precision</div>
+    <div class="metric-value">{{ "%.2f"|format(metrics.precision * 100) }}<span class="metric-unit">%</span></div>
+    <div class="metric-bar"><div class="metric-fill" style="width:{{ "%.1f"|format(metrics.precision * 100) }}%"></div></div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">Recall</div>
+    <div class="metric-value">{{ "%.2f"|format(metrics.recall * 100) }}<span class="metric-unit">%</span></div>
+    <div class="metric-bar"><div class="metric-fill" style="width:{{ "%.1f"|format(metrics.recall * 100) }}%"></div></div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">F1-Score</div>
+    <div class="metric-value">{{ "%.2f"|format(metrics.f1_score * 100) }}<span class="metric-unit">%</span></div>
+    <div class="metric-bar"><div class="metric-fill" style="width:{{ "%.1f"|format(metrics.f1_score * 100) }}%"></div></div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">ROC-AUC</div>
+    <div class="metric-value">{{ "%.2f"|format(metrics.roc_auc * 100) }}<span class="metric-unit">%</span></div>
+    <div class="metric-bar"><div class="metric-fill accent" style="width:{{ "%.1f"|format(metrics.roc_auc * 100) }}%"></div></div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">Data Training</div>
+    <div class="metric-value">{{ metrics.train_samples + metrics.test_samples }}<span class="metric-unit">img</span></div>
+    <div class="metric-caption">{{ metrics.train_samples }} train / {{ metrics.test_samples }} test</div>
+  </div>
+</div>
+
+<!-- Detail row -->
+<div class="detail-row mt-4">
+
+  <!-- Confusion Matrix -->
+  <div class="detail-card">
+    <div class="detail-card-header">Confusion Matrix</div>
+    <div class="detail-card-body">
+      <div class="cm-table-wrapper">
+        <table class="cm-table">
+          <thead>
+            <tr>
+              <th></th>
+              {% for cls in metrics.classes or ['NORMAL','PNEUMONIA'] %}<th class="pred-col">Pred. {{ cls }}</th>{% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in metrics.confusion_matrix %}
+            {% set i = loop.index0 %}
+            <tr>
+              <th class="actual-row">Actual {{ metrics.classes[i] }}</th>
+              {% for val in row %}
+              <td class="cm-cell {% if loop.index0 == i %}cm-tp{% else %}cm-fp{% endif %}">{{ val }}</td>
+              {% endfor %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- CV Scores -->
+  <div class="detail-card">
+    <div class="detail-card-header">Perbandingan Classifier (CV Accuracy)</div>
+    <div class="detail-card-body">
+      {% for clf_name, cv_acc in metrics.cv_scores.items() %}
+      <div class="clf-row {% if clf_name == metrics.model_name %}clf-best{% endif %}">
+        <div class="clf-name">{{ clf_name }}{% if clf_name == metrics.model_name %} <span class="badge-best">Terpilih</span>{% endif %}</div>
+        <div class="clf-bar-outer">
+          <div class="clf-bar-inner" style="width:{{ cv_acc }}%"></div>
+        </div>
+        <div class="clf-score">{{ cv_acc }}%</div>
+      </div>
+      {% endfor %}
+
+      <div class="info-note mt-3">
+        <strong>Dimensi Fitur:</strong> {{ metrics.n_features }} — GLCM (60) + LBP (26) + Statistik (10)
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endif %}
+
+<!-- Info cards (always visible) -->
+<div class="info-grid mt-4">
+  <div class="info-card">
+    <div class="info-card-title">Kelas Klasifikasi</div>
+    <div class="info-card-body">
+      <div class="class-item class-normal">NORMAL</div>
+      <div class="class-item class-sick">PNEUMONIA</div>
+      <div class="class-item class-unknown">TIDAK DIKENALI <span class="subdesc">(via Isolation Forest + threshold)</span></div>
+    </div>
+  </div>
+  <div class="info-card">
+    <div class="info-card-title">Metode Ekstraksi Fitur</div>
+    <div class="info-card-body feature-list">
+      <div class="feat-item"><span class="feat-tag">GLCM</span> Contrast, Dissimilarity, Homogeneity, Energy, Correlation, ASM (2 jarak × 4 sudut)</div>
+      <div class="feat-item"><span class="feat-tag">LBP</span> Local Binary Pattern — uniform histogram (26 bin)</div>
+      <div class="feat-item"><span class="feat-tag">STAT</span> Mean, Std, Skewness, Kurtosis, Percentile, Energy (10 nilai)</div>
+    </div>
+  </div>
+  <div class="info-card">
+    <div class="info-card-title">Algoritma Tersedia</div>
+    <div class="info-card-body feature-list">
+      <div class="feat-item"><span class="feat-tag">SVM</span> Support Vector Machine — kernel RBF, C=10</div>
+      <div class="feat-item"><span class="feat-tag">RF</span> Random Forest — 200 estimator</div>
+      <div class="feat-item"><span class="feat-tag">GB</span> Gradient Boosting — 150 estimator, lr=0.1</div>
+      <div class="feat-item"><span class="feat-tag">ISO</span> Isolation Forest — anomaly detector, 300 estimator</div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

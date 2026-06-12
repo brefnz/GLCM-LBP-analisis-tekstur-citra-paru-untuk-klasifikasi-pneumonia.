@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block title %}Tentang Aplikasi{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Tentang Aplikasi</h1>
+  <p class="page-subtitle">Informasi sistem, dataset, dan panduan penggunaan</p>
+</div>
+
+<div class="about-grid">
+
+  <!-- Overview -->
+  <div class="about-card full-width">
+    <div class="about-card-title">LungClassify</div>
+    <div class="about-card-body">
+      <p>LungClassify adalah aplikasi klasifikasi penyakit paru-paru berbasis pengolahan citra digital.
+      Aplikasi menggunakan kombinasi metode ekstraksi fitur tekstur tradisional (GLCM, LBP)
+      dengan fitur statistik, dan melatih tiga classifier secara otomatis untuk memilih model dengan performa terbaik.</p>
+      <p>Sistem dirancang untuk mengklasifikasikan citra rontgen dada menjadi dua kelas klinis: <strong>Normal</strong>
+      dan <strong>Pneumonia</strong>. Gambar yang tidak dikenali sebagai citra rontgen ditangani secara otomatis
+      menggunakan mekanisme confidence threshold tanpa memerlukan kelas dataset tambahan.</p>
+    </div>
+  </div>
+
+  <!-- Dataset -->
+  <div class="about-card">
+    <div class="about-card-title">Dataset yang Direkomendasikan</div>
+    <div class="about-card-body">
+      <div class="dataset-block">
+        <div class="dataset-name">Chest X-Ray Images (Pneumonia)</div>
+        <div class="dataset-source">Kaggle — Paul Mooney</div>
+        <div class="dataset-stats">
+          <span class="ds-stat">5.856 gambar total</span>
+          <span class="ds-stat">NORMAL: 1.583</span>
+          <span class="ds-stat">PNEUMONIA: 4.273</span>
+        </div>
+        <p class="dataset-note">
+          Dataset berisi citra rontgen dada dari pasien anak-anak. Sistem secara otomatis
+          melakukan undersampling untuk menyeimbangkan kedua kelas saat training.
+        </p>
+        <a href="https://www.kaggle.com/datasets/paultimothymooney/chest-xray-pneumonia"
+           target="_blank" class="dataset-link">
+          Buka di Kaggle
+        </a>
+      </div>
+
+      <div class="dataset-block mt-3">
+        <div class="dataset-name">COVID-19 Radiography Database</div>
+        <div class="dataset-source">Kaggle — Tawsifur Rahman et al.</div>
+        <div class="dataset-stats">
+          <span class="ds-stat">21.165 gambar</span>
+          <span class="ds-stat">NORMAL: 10.192</span>
+          <span class="ds-stat">Lebih seimbang</span>
+        </div>
+        <p class="dataset-note">
+          Alternatif dataset yang lebih besar dan lebih seimbang. Gunakan folder NORMAL
+          dan COVID sebagai dua kelas (rename folder PNEUMONIA sesuai kebutuhan).
+        </p>
+        <a href="https://www.kaggle.com/datasets/tawsifurrahman/covid19-radiography-database"
+           target="_blank" class="dataset-link">
+          Buka di Kaggle
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Setup guide -->
+  <div class="about-card">
+    <div class="about-card-title">Panduan Instalasi</div>
+    <div class="about-card-body">
+      <ol class="setup-list">
+        <li>
+          <strong>Install dependensi Python</strong>
+          <code class="code-block">pip install -r requirements.txt</code>
+        </li>
+        <li>
+          <strong>Siapkan dataset</strong><br>
+          Letakkan gambar ke dalam folder:
+          <code class="code-block">dataset/
+  NORMAL/     (gambar paru-paru normal)
+  PNEUMONIA/  (gambar paru-paru dengan pneumonia)</code>
+        </li>
+        <li>
+          <strong>Jalankan aplikasi</strong>
+          <code class="code-block">python app.py</code>
+        </li>
+        <li>
+          <strong>Buka browser</strong><br>
+          Akses aplikasi di <code>http://localhost:5000</code>
+        </li>
+        <li>
+          <strong>Lakukan training</strong><br>
+          Buka menu Training Model, lalu klik "Mulai Training".
+          Setelah training selesai, model tersimpan otomatis dan tidak perlu dilatih ulang.
+        </li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- Methods -->
+  <div class="about-card">
+    <div class="about-card-title">Metode yang Digunakan</div>
+    <div class="about-card-body">
+      <div class="method-section">
+        <div class="method-title">1. Pra-pemrosesan Citra</div>
+        <ul class="method-list">
+          <li>Konversi ke grayscale</li>
+          <li>Resize ke 256x256 piksel</li>
+          <li>CLAHE (Contrast Limited Adaptive Histogram Equalization) untuk peningkatan kontras</li>
+        </ul>
+      </div>
+
+      <div class="method-section">
+        <div class="method-title">2. Ekstraksi Fitur GLCM</div>
+        <ul class="method-list">
+          <li>Gray-Level Co-occurrence Matrix (GLCM)</li>
+          <li>2 jarak (d=1, d=2) × 4 sudut (0°, 45°, 90°, 135°)</li>
+          <li>6 properti: Contrast, Dissimilarity, Homogeneity, Energy, Correlation, ASM</li>
+          <li>Total: 60 fitur GLCM</li>
+        </ul>
+      </div>
+
+      <div class="method-section">
+        <div class="method-title">3. Ekstraksi Fitur LBP</div>
+        <ul class="method-list">
+          <li>Local Binary Pattern — uniform method</li>
+          <li>Radius = 3, titik = 24</li>
+          <li>Histogram ternormalisasi: 26 bin</li>
+        </ul>
+      </div>
+
+      <div class="method-section">
+        <div class="method-title">4. Fitur Statistik</div>
+        <ul class="method-list">
+          <li>Mean, Std, Skewness, Kurtosis</li>
+          <li>Persentil (P10, P25, P75, P90)</li>
+          <li>Energi intensitas, Variansi</li>
+          <li>Total: 10 fitur statistik</li>
+        </ul>
+      </div>
+
+      <div class="method-section">
+        <div class="method-title">5. Klasifikasi</div>
+        <ul class="method-list">
+          <li>SVM dengan kernel RBF (C=10, gamma=scale)</li>
+          <li>Random Forest (200 estimator)</li>
+          <li>Gradient Boosting (150 estimator, lr=0.1)</li>
+          <li>Model terbaik dipilih via 5-Fold Stratified Cross-Validation</li>
+          <li>StandardScaler untuk normalisasi fitur</li>
+        </ul>
+      </div>
+
+      <div class="method-section">
+        <div class="method-title">6. Deteksi Gambar Non-Paru (2 Layer)</div>
+        <ul class="method-list">
+          <li><strong>Layer 1 — Isolation Forest:</strong> dilatih pada seluruh fitur rontgen paru-paru. Gambar di luar distribusi rontgen (foto benda, selfie, dll.) langsung ditolak sebagai outlier sebelum masuk ke classifier</li>
+          <li><strong>Layer 2 — Confidence Threshold (55%):</strong> jika Isolation Forest meloloskan gambar namun classifier tidak cukup yakin, hasil tetap dikembalikan sebagai "Tidak Dikenali"</li>
+          <li>Tidak memerlukan dataset kelas ketiga</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tech stack -->
+  <div class="about-card">
+    <div class="about-card-title">Teknologi yang Digunakan</div>
+    <div class="about-card-body">
+      <div class="tech-grid">
+        <div class="tech-item"><span class="tech-name">Python 3.10+</span><span class="tech-desc">Backend language</span></div>
+        <div class="tech-item"><span class="tech-name">Flask</span><span class="tech-desc">Web framework</span></div>
+        <div class="tech-item"><span class="tech-name">scikit-learn</span><span class="tech-desc">SVM, RF, GB, Isolation Forest</span></div>
+        <div class="tech-item"><span class="tech-name">scikit-image</span><span class="tech-desc">GLCM, LBP</span></div>
+        <div class="tech-item"><span class="tech-name">OpenCV</span><span class="tech-desc">Image processing, CLAHE</span></div>
+        <div class="tech-item"><span class="tech-name">NumPy / SciPy</span><span class="tech-desc">Numerik & statistik</span></div>
+        <div class="tech-item"><span class="tech-name">joblib</span><span class="tech-desc">Model persistence</span></div>
+        <div class="tech-item"><span class="tech-name">Bootstrap 5</span><span class="tech-desc">UI framework</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Disclaimer -->
+  <div class="about-card full-width">
+    <div class="about-card-title">Disclaimer</div>
+    <div class="about-card-body">
+      <p>Aplikasi ini dikembangkan untuk keperluan akademis dan riset pengolahan citra digital.
+      Hasil klasifikasi yang dihasilkan oleh sistem ini <strong>bukan merupakan diagnosis medis</strong>
+      dan tidak boleh digunakan sebagai pengganti konsultasi dengan tenaga medis profesional.</p>
+      <p>Untuk evaluasi klinis yang tepat, selalu konsultasikan hasil pemeriksaan rontgen dengan dokter radiologi atau spesialis paru.</p>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+{% block title %}Prediksi Gambar{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Prediksi Gambar</h1>
+  <p class="page-subtitle">Unggah citra rontgen paru-paru untuk mendapatkan hasil klasifikasi</p>
+</div>
+
+{% if not trained %}
+<div class="status-banner status-warning mb-4">
+  <div class="status-banner-icon">
+    <svg viewBox="0 0 24 24" fill="none"><path d="M12 8v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  </div>
+  <div>
+    <div class="status-banner-title">Model Belum Tersedia</div>
+    <div class="status-banner-sub">Lakukan training model terlebih dahulu sebelum melakukan prediksi.</div>
+  </div>
+  <a href="{{ url_for('train_page') }}" class="btn-action ms-auto">Ke Halaman Training</a>
+</div>
+{% endif %}
+
+<div class="predict-layout">
+
+  <!-- Upload panel -->
+  <div class="upload-panel">
+    <div class="upload-area" id="uploadArea">
+      <div class="upload-icon">
+        <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="4" y="4" width="40" height="40" rx="8" stroke="currentColor" stroke-width="2"/>
+          <path d="M24 16v16M16 24l8-8 8 8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <p class="upload-label">Seret gambar ke sini atau klik untuk memilih file</p>
+      <p class="upload-hint">Format: PNG, JPG, JPEG — Maks. 16 MB</p>
+      <input type="file" id="fileInput" accept=".png,.jpg,.jpeg" class="file-input-hidden" />
+      <button class="btn-upload" id="browseBtn" {% if not trained %}disabled{% endif %}>
+        Pilih File
+      </button>
+    </div>
+
+    <!-- Preview -->
+    <div class="preview-area" id="previewArea" style="display:none;">
+      <img id="previewImg" src="" alt="Preview" />
+      <div class="preview-meta" id="previewMeta"></div>
+      <div class="preview-actions">
+        <button class="btn-predict" id="predictBtn">Analisis Gambar</button>
+        <button class="btn-reset" id="resetBtn">Ganti Gambar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Result panel -->
+  <div class="result-panel" id="resultPanel">
+    <div class="result-placeholder" id="resultPlaceholder">
+      <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="2" stroke-dasharray="6 4"/>
+        <path d="M22 32C22 32 20 26 28 24C32 23 34 25 34 25" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        <path d="M42 32C42 32 44 26 36 24C32 23 30 25 30 25" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        <circle cx="32" cy="28" r="3" stroke="currentColor" stroke-width="1.8"/>
+        <path d="M24 36C24 36 27 40 32 40C37 40 40 36 40 36" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+      <p>Hasil analisis akan ditampilkan di sini</p>
+    </div>
+
+    <div class="result-content" id="resultContent" style="display:none;">
+
+      <!-- Verdict -->
+      <div class="verdict-box" id="verdictBox">
+        <div class="verdict-label">Hasil Klasifikasi</div>
+        <div class="verdict-class" id="verdictClass"></div>
+        <div class="verdict-desc" id="verdictDesc"></div>
+      </div>
+
+      <!-- Confidence bar -->
+      <div class="conf-block">
+        <div class="conf-row">
+          <span class="conf-label">Confidence</span>
+          <span class="conf-value" id="confValue"></span>
+        </div>
+        <div class="conf-bar-outer">
+          <div class="conf-bar-fill" id="confBarFill"></div>
+        </div>
+        <div class="conf-note" id="confNote"></div>
+      </div>
+
+      <!-- Probability distribution -->
+      <div class="prob-block">
+        <div class="prob-title">Distribusi Probabilitas</div>
+        <div id="probBars"></div>
+      </div>
+
+      <!-- Warning note for unknown -->
+      <div class="unknown-note" id="unknownNote" style="display:none;">
+        <strong>Catatan:</strong> Gambar ini tidak terdeteksi sebagai citra rontgen paru-paru.
+        Confidence di bawah threshold menunjukkan bahwa model tidak dapat membuat keputusan yang andal.
+      </div>
+
+      <!-- Disclaimer -->
+      <div class="disclaimer-note">
+        Hasil ini merupakan keluaran sistem berbasis machine learning dan bukan diagnosis medis.
+        Konsultasikan dengan dokter untuk interpretasi yang tepat.
+      </div>
+
+    </div><!-- /.result-content -->
+
+    <!-- Loading overlay -->
+    <div class="result-loading" id="resultLoading" style="display:none;">
+      <div class="spinner"></div>
+      <p>Menganalisis citra...</p>
+    </div>
+
+  </div><!-- /.result-panel -->
+</div><!-- /.predict-layout -->
+
+<!-- Usage guide -->
+<div class="guide-section mt-4">
+  <div class="guide-title">Panduan Penggunaan</div>
+  <div class="guide-steps">
+    <div class="guide-step">
+      <div class="step-num">1</div>
+      <div class="step-text">Siapkan citra rontgen dada (chest X-ray) dalam format PNG atau JPG</div>
+    </div>
+    <div class="guide-step">
+      <div class="step-num">2</div>
+      <div class="step-text">Unggah gambar menggunakan tombol di atas atau seret ke area upload</div>
+    </div>
+    <div class="guide-step">
+      <div class="step-num">3</div>
+      <div class="step-text">Klik "Analisis Gambar" dan tunggu hasil klasifikasi</div>
+    </div>
+    <div class="guide-step">
+      <div class="step-num">4</div>
+      <div class="step-text">Baca hasil dengan memperhatikan nilai confidence dan distribusi probabilitas</div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const trained = {{ 'true' if trained else 'false' }};
+  const uploadArea = document.getElementById('uploadArea');
+  const fileInput  = document.getElementById('fileInput');
+  const browseBtn  = document.getElementById('browseBtn');
+  const previewArea= document.getElementById('previewArea');
+  const previewImg = document.getElementById('previewImg');
+  const previewMeta= document.getElementById('previewMeta');
+  const predictBtn = document.getElementById('predictBtn');
+  const resetBtn   = document.getElementById('resetBtn');
+
+  const resultPlaceholder = document.getElementById('resultPlaceholder');
+  const resultContent = document.getElementById('resultContent');
+  const resultLoading = document.getElementById('resultLoading');
+
+  let selectedFile = null;
+
+  if (browseBtn) browseBtn.addEventListener('click', () => fileInput.click());
+
+  // Drag & drop
+  uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('drag-over'); });
+  uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag-over'));
+  uploadArea.addEventListener('drop', e => {
+    e.preventDefault();
+    uploadArea.classList.remove('drag-over');
+    if (!trained) return;
+    const f = e.dataTransfer.files[0];
+    if (f) handleFile(f);
+  });
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) handleFile(fileInput.files[0]);
+  });
+
+  resetBtn.addEventListener('click', () => {
+    selectedFile = null;
+    fileInput.value = '';
+    previewArea.style.display = 'none';
+    uploadArea.style.display = '';
+    showPlaceholder();
+  });
+
+  predictBtn.addEventListener('click', () => {
+    if (!selectedFile) return;
+    runPrediction(selectedFile);
+  });
+
+  function handleFile(file) {
+    selectedFile = file;
+    const reader = new FileReader();
+    reader.onload = e => {
+      previewImg.src = e.target.result;
+      previewMeta.textContent = `${file.name}  (${(file.size / 1024).toFixed(1)} KB)`;
+      uploadArea.style.display = 'none';
+      previewArea.style.display = '';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function showPlaceholder() {
+    resultPlaceholder.style.display = '';
+    resultContent.style.display = 'none';
+    resultLoading.style.display = 'none';
+  }
+
+  function showLoading() {
+    resultPlaceholder.style.display = 'none';
+    resultContent.style.display = 'none';
+    resultLoading.style.display = '';
+  }
+
+  function showResult() {
+    resultPlaceholder.style.display = 'none';
+    resultContent.style.display = '';
+    resultLoading.style.display = 'none';
+  }
+
+  function runPrediction(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    showLoading();
+
+    fetch('{{ url_for("prediksi_api") }}', { method: 'POST', body: formData })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) {
+          alert('Error: ' + data.error);
+          showPlaceholder();
+          return;
+        }
+        renderResult(data);
+        showResult();
+      })
+      .catch(err => {
+        alert('Terjadi kesalahan koneksi: ' + err.message);
+        showPlaceholder();
+      });
+  }
+
+  function renderResult(data) {
+    const isUnknown = data.status === 'unknown';
+    const vBox = document.getElementById('verdictBox');
+    vBox.className = 'verdict-box ' + (isUnknown ? 'verdict-unknown' : (data.prediction === 'NORMAL' ? 'verdict-normal' : 'verdict-sick'));
+
+    document.getElementById('verdictClass').textContent = data.label_display || data.prediction;
+    document.getElementById('verdictDesc').textContent = data.description;
+
+    const conf = data.confidence;
+    document.getElementById('confValue').textContent = conf.toFixed(2) + '%';
+    const fill = document.getElementById('confBarFill');
+    fill.style.width = conf + '%';
+    fill.className = 'conf-bar-fill ' + (conf >= 80 ? 'fill-high' : conf >= 65 ? 'fill-mid' : 'fill-low');
+
+    if (data.note) {
+      document.getElementById('confNote').textContent = data.note;
+    } else {
+      document.getElementById('confNote').textContent = `Threshold: ${data.threshold}%`;
+    }
+
+    // Probability bars
+    const probBars = document.getElementById('probBars');
+    probBars.innerHTML = '';
+    for (const [cls, pct] of Object.entries(data.probabilities)) {
+      const row = document.createElement('div');
+      row.className = 'prob-row';
+      row.innerHTML = `
+        <span class="prob-cls">${cls}</span>
+        <div class="prob-outer"><div class="prob-inner ${cls === 'NORMAL' ? 'prob-normal' : 'prob-sick'}" style="width:${pct}%"></div></div>
+        <span class="prob-pct">${pct.toFixed(2)}%</span>`;
+      probBars.appendChild(row);
+    }
+
+    document.getElementById('unknownNote').style.display = isUnknown ? '' : 'none';
+  }
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}LungClassify{% endblock %} — Sistem Klasifikasi Paru-Paru</title>
+
+  <!-- Google Fonts: Syne (display) + Lexend (body) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Lexend:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+
+  <!-- Custom -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+
+  {% block head %}{% endblock %}
+</head>
+<body>
+
+  <!-- ── Navbar ── -->
+  <header class="app-navbar" role="banner">
+    <div class="navbar-inner">
+      <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+        <span></span><span></span><span></span>
+      </button>
+
+      <a href="{{ url_for('dashboard') }}" class="brand">
+        <svg class="brand-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M18 4C18 4 7 8 7 18C7 23 10 27 14 29C14 29 13 24 16 21C17 20 18 20 18 20"
+                stroke="#4ec9b0" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M18 4C18 4 29 8 29 18C29 23 26 27 22 29C22 29 23 24 20 21C19 20 18 20 18 20"
+                stroke="#4ec9b0" stroke-width="2.2" stroke-linecap="round"/>
+          <circle cx="18" cy="20" r="2.5" fill="#4ec9b0"/>
+          <path d="M12 15C12 15 14 13 18 13C22 13 24 15 24 15" stroke="#6db8c8" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+        <span class="brand-name">LungClassify</span>
+      </a>
+
+      <div class="navbar-meta ms-auto">
+        <span class="meta-tag">Sistem Klasifikasi Penyakit Paru-Paru</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Layout wrapper ── -->
+  <div class="app-layout">
+
+    <!-- ── Sidebar ── -->
+    <aside class="app-sidebar" id="appSidebar" role="navigation" aria-label="Navigasi utama">
+      <div class="sidebar-section-label">Menu Utama</div>
+      <nav>
+        <ul class="sidebar-nav">
+
+          <li class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
+            <a href="{{ url_for('dashboard') }}" class="nav-link-item">
+              <svg class="nav-icon" viewBox="0 0 20 20" fill="none">
+                <rect x="2" y="2" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/>
+                <rect x="11" y="2" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/>
+                <rect x="2" y="11" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/>
+                <rect x="11" y="11" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/>
+              </svg>
+              Dashboard
+            </a>
+          </li>
+
+          <li class="nav-item {% if request.endpoint == 'prediksi_page' %}active{% endif %}">
+            <a href="{{ url_for('prediksi_page') }}" class="nav-link-item">
+              <svg class="nav-icon" viewBox="0 0 20 20" fill="none">
+                <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.6"/>
+                <path d="M10 6v4l3 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              </svg>
+              Prediksi Gambar
+            </a>
+          </li>
+
+          <li class="nav-item {% if request.endpoint == 'train_page' %}active{% endif %}">
+            <a href="{{ url_for('train_page') }}" class="nav-link-item">
+              <svg class="nav-icon" viewBox="0 0 20 20" fill="none">
+                <path d="M3 10h14M3 6h14M3 14h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              </svg>
+              Training Model
+            </a>
+          </li>
+
+          <li class="nav-item {% if request.endpoint == 'tentang' %}active{% endif %}">
+            <a href="{{ url_for('tentang') }}" class="nav-link-item">
+              <svg class="nav-icon" viewBox="0 0 20 20" fill="none">
+                <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.6"/>
+                <path d="M10 9v5M10 7v.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+              Tentang Aplikasi
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <div class="sidebar-section-label mt-4">Status Model</div>
+      <div class="model-status-pill" id="sidebarModelStatus">
+        <span class="status-dot" id="sidebarStatusDot"></span>
+        <span id="sidebarStatusLabel">Memeriksa...</span>
+      </div>
+    </aside>
+
+    <!-- ── Main Content ── -->
+    <main class="app-content" id="appContent" role="main">
+      <div class="content-inner">
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+
+  </div><!-- /.app-layout -->
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Main JS -->
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>
